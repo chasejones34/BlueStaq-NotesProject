@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: teamnotes-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-teamnotes}
+      POSTGRES_USER: ${POSTGRES_USER:-teamnotes}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-teamnotes}
+    ports:
+      - "5432:5432"
+    volumes:
+      - teamnotes-postgres-data:/var/lib/postgresql/data
+      - ./database/001_initial_schema.sql:/docker-entrypoint-initdb.d/001_initial_schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U teamnotes -d teamnotes"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  teamnotes-postgres-data:
