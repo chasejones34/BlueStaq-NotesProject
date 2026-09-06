@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 using TeamNotes.Api.Contracts;
@@ -79,5 +80,58 @@ public class ApiAuthorizationTests
         Assert.NotNull(loginResult);
         Assert.False(
             string.IsNullOrWhiteSpace(loginResult!.AccessToken));
+    }
+
+    [Fact]
+    public async Task CreateTeam_WithValidJwt_ReturnsCreated()
+    {
+        var uniqueId = Guid.NewGuid().ToString("N");
+
+        var createUserResponse = await _client.PostAsJsonAsync(
+            "/api/users",
+            new
+            {
+                username = $"teamuser{uniqueId}",
+                email = $"teamuser{uniqueId}@example.com",
+                password = "Password123!"
+            });
+
+        Assert.Equal(
+            HttpStatusCode.Created,
+            createUserResponse.StatusCode);
+
+        var loginResponse = await _client.PostAsJsonAsync(
+            "/api/auth/login",
+            new
+            {
+                usernameOrEmail = $"teamuser{uniqueId}",
+                password = "Password123!"
+            });
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            loginResponse.StatusCode);
+
+        var loginResult =
+            await loginResponse.Content
+                .ReadFromJsonAsync<LoginResponse>();
+
+        Assert.NotNull(loginResult);
+
+        _client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(
+                "Bearer",
+                loginResult!.AccessToken);
+
+        var createTeamResponse = await _client.PostAsJsonAsync(
+            "/api/teams",
+            new
+            {
+                name = $"Test Team {uniqueId}"
+            });
+
+        Assert.Equal(
+            HttpStatusCode.Created,
+            createTeamResponse.StatusCode);
     }
 }
