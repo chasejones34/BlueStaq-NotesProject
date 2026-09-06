@@ -223,4 +223,123 @@ public class ApiAuthorizationTests
             "Integration test note",
             retrievedNote!.Title);
     }
+
+    [Fact]
+    public async Task Editor_CannotDeleteNote_ReturnsForbidden()
+    {
+        var uniqueId = Guid.NewGuid().ToString("N");
+
+        var ownerUsername = $"owner{uniqueId}";
+        var editorUsername = $"editor{uniqueId}";
+
+        await _client.PostAsJsonAsync(
+            "/api/users",
+            new
+            {
+                username = ownerUsername,
+                email = $"{ownerUsername}@example.com",
+                password = "Password123!"
+            });
+
+        var ownerLoginResponse = await _client.PostAsJsonAsync(
+            "/api/auth/login",
+            new
+            {
+                usernameOrEmail = ownerUsername,
+                password = "Password123!"
+            });
+
+        var ownerLogin =
+            await ownerLoginResponse.Content
+                .ReadFromJsonAsync<LoginResponse>();
+
+        Assert.NotNull(ownerLogin);
+
+        _client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(
+                "Bearer",
+                ownerLogin!.AccessToken);
+
+        var createTeamResponse = await _client.PostAsJsonAsync(
+            "/api/teams",
+            new
+            {
+                name = $"Permission Team {uniqueId}"
+            });
+
+        Assert.Equal(
+            HttpStatusCode.Created,
+            createTeamResponse.StatusCode);
+
+        var team =
+            await createTeamResponse.Content
+                .ReadFromJsonAsync<TeamResponse>();
+
+        Assert.NotNull(team);
+
+        await _client.PostAsJsonAsync(
+            "/api/users",
+            new
+            {
+                username = editorUsername,
+                email = $"{editorUsername}@example.com",
+                password = "Password123!"
+            });
+
+        var addMemberResponse = await _client.PostAsJsonAsync(
+            $"/api/teams/{team!.Id}/members",
+            new
+            {
+                username = editorUsername,
+                role = 2
+            });
+
+        Assert.Equal(
+            HttpStatusCode.Created,
+            addMemberResponse.StatusCode);
+
+        var editorLoginResponse = await _client.PostAsJsonAsync(
+            "/api/auth/login",
+            new
+            {
+                usernameOrEmail = editorUsername,
+                password = "Password123!"
+            });
+
+        var editorLogin =
+            await editorLoginResponse.Content
+                .ReadFromJsonAsync<LoginResponse>();
+
+        Assert.NotNull(editorLogin);
+
+        _client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(
+                "Bearer",
+                editorLogin!.AccessToken);
+
+        var createNoteResponse = await _client.PostAsJsonAsync(
+            $"/api/teams/{team.Id}/notes",
+            new
+            {
+                title = "Editor note",
+                content = "An Editor can create this note."
+            });
+
+        Assert.Equal(
+            HttpStatusCode.Created,
+            createNoteResponse.StatusCode);
+
+        var note =
+            await createNoteResponse.Content
+                .ReadFromJsonAsync<NoteResponse>();
+
+        Assert.NotNull(note);
+
+        var deleteResponse = await _client.DeleteAsync(
+            $"/api/notes/{note!.Id}");
+
+        Assert.Equal(
+            HttpStatusCode.Forbidden,
+            deleteResponse.StatusCode);
+    }
 }

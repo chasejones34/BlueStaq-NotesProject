@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("TeamNotes.Api.Tests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f65630747f917493f4d892eca72db096e1bdb433")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+9c7f22622000f5b2111656e5853d43e40604ae66")]
 [assembly: System.Reflection.AssemblyProductAttribute("TeamNotes.Api.Tests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("TeamNotes.Api.Tests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
