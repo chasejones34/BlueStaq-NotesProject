@@ -8,12 +8,10 @@
     "Audience": "TeamNotes.Api"
   },
   "Logging": {
-  "LogLevel": {
-    "Default": "Information",
-    "Microsoft.AspNetCore": "Warning",
-    "Microsoft.AspNetCore.Authentication": "Debug",
-    "Microsoft.AspNetCore.Authorization": "Debug"
-  }
-},
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
   "AllowedHosts": "*"
 }
