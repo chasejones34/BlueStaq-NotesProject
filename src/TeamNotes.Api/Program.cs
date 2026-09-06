@@ -23,7 +23,7 @@ builder.Services.AddSwaggerGen(options =>
                 Scheme = "bearer",
                 BearerFormat = "JWT",
                 In = ParameterLocation.Header,
-                Description = "Enter: Bearer {your JWT token}"
+                Description = "Enter Valid JWT Token"
             });
 
         options.AddSecurityRequirement(document =>
