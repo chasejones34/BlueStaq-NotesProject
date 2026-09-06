@@ -134,4 +134,93 @@ public class ApiAuthorizationTests
             HttpStatusCode.Created,
             createTeamResponse.StatusCode);
     }
+
+    [Fact]
+    public async Task CreateAndRetrieveNote_WithValidJwt_ReturnsNote()
+    {
+        var uniqueId = Guid.NewGuid().ToString("N");
+
+        var createUserResponse = await _client.PostAsJsonAsync(
+            "/api/users",
+            new
+            {
+                username = $"noteuser{uniqueId}",
+                email = $"noteuser{uniqueId}@example.com",
+                password = "Password123!"
+            });
+
+        Assert.Equal(
+            HttpStatusCode.Created,
+            createUserResponse.StatusCode);
+
+        var loginResponse = await _client.PostAsJsonAsync(
+            "/api/auth/login",
+            new
+            {
+                usernameOrEmail = $"noteuser{uniqueId}",
+                password = "Password123!"
+            });
+
+        var loginResult =
+            await loginResponse.Content
+                .ReadFromJsonAsync<LoginResponse>();
+
+        Assert.NotNull(loginResult);
+
+        _client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue(
+                "Bearer",
+                loginResult!.AccessToken);
+
+        var createTeamResponse = await _client.PostAsJsonAsync(
+            "/api/teams",
+            new
+            {
+                name = $"Note Team {uniqueId}"
+            });
+
+        Assert.Equal(
+            HttpStatusCode.Created,
+            createTeamResponse.StatusCode);
+
+        var team =
+            await createTeamResponse.Content
+                .ReadFromJsonAsync<TeamResponse>();
+
+        Assert.NotNull(team);
+
+        var createNoteResponse = await _client.PostAsJsonAsync(
+            $"/api/teams/{team!.Id}/notes",
+            new
+            {
+                title = "Integration test note",
+                content = "This note was created by an automated test."
+            });
+
+        Assert.Equal(
+            HttpStatusCode.Created,
+            createNoteResponse.StatusCode);
+
+        var note =
+            await createNoteResponse.Content
+                .ReadFromJsonAsync<NoteResponse>();
+
+        Assert.NotNull(note);
+
+        var getNoteResponse = await _client.GetAsync(
+            $"/api/notes/{note!.Id}");
+
+        Assert.Equal(
+            HttpStatusCode.OK,
+            getNoteResponse.StatusCode);
+
+        var retrievedNote =
+            await getNoteResponse.Content
+                .ReadFromJsonAsync<NoteResponse>();
+
+        Assert.NotNull(retrievedNote);
+        Assert.Equal(
+            "Integration test note",
+            retrievedNote!.Title);
+    }
 }
