@@ -75,4 +75,80 @@ public sealed class TeamsController(AppDbContext db) : ControllerBase
                 team.CreatedAtUtc,
                 TeamRole.Owner));
     }
+
+    [HttpPost("{teamId:int}/members")]
+    public async Task<ActionResult<TeamMemberResponse>> AddMember(
+        int teamId,
+        AddTeamMemberRequest request,
+        CancellationToken cancellationToken)
+    {
+        var actorId = User.GetUserId();
+
+        if (actorId is null)
+            return Unauthorized();
+
+        var actorRole = await db.TeamMembers
+            .Where(member =>
+                member.TeamId == teamId &&
+                member.UserId == actorId.Value)
+            .Select(member => (TeamRole?)member.Role)
+            .SingleOrDefaultAsync(cancellationToken);
+
+        if (actorRole is null)
+            return Forbid();
+
+        if (actorRole != TeamRole.Owner)
+        {
+            return StatusCode(
+                403,
+                "Owner access is required to manage team members.");
+        }
+
+        if (!Enum.IsDefined(request.Role) ||
+            request.Role == TeamRole.Owner)
+        {
+            return BadRequest(
+                "New members must be assigned Member, Editor, or TeamLead.");
+        }
+
+        var username = request.Username.Trim().ToLowerInvariant();
+
+        var user = await db.Users
+            .SingleOrDefaultAsync(
+                item => item.Username == username,
+                cancellationToken);
+
+        if (user is null)
+            return NotFound("The specified user does not exist.");
+
+        var alreadyMember = await db.TeamMembers.AnyAsync(
+            member =>
+                member.TeamId == teamId &&
+                member.UserId == user.Id,
+            cancellationToken);
+
+        if (alreadyMember)
+            return Conflict(
+                "The user is already a member of this team.");
+
+        var teamMember = new TeamMember
+        {
+            TeamId = teamId,
+            UserId = user.Id,
+            Role = request.Role
+        };
+
+        db.TeamMembers.Add(teamMember);
+        await db.SaveChangesAsync(cancellationToken);
+
+        var response = new TeamMemberResponse(
+            user.Id,
+            user.Username,
+            teamMember.Role,
+            teamMember.JoinedAtUtc);
+
+        return Created(
+            $"/api/teams/{teamId}/members/{user.Id}",
+            response);
+    }
 }
